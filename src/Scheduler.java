@@ -1,7 +1,8 @@
-import com.oocourse.elevator1.PersonRequest;
-
 import java.util.ArrayList;
 import java.util.Iterator;
+
+import static utils.FloorConverter.floorString2Int;
+import com.oocourse.elevator1.PersonRequest;
 
 public class Scheduler {
     private static Scheduler instance;
@@ -28,6 +29,10 @@ public class Scheduler {
         }
     }
 
+    /**
+     * 获取调度器的单例实例
+     * @return Scheduler的单例实例
+     */
     public static Scheduler getInstance() {
         if (instance == null) {
             instance = new Scheduler();
@@ -36,8 +41,8 @@ public class Scheduler {
     }
 
     /**
-     * 面对新加入的乘客请求,电梯调度器做出的选择
-     * @param request
+     * 处理新的乘客请求，分配电梯并加入等待队列
+     * @param request 乘客请求对象，包含出发楼层、目标楼层等信息
      */
     public void requestElevator(PersonRequest request) {
         synchronized (this) {
@@ -67,6 +72,13 @@ public class Scheduler {
         }
     }
 
+    /**
+     * 判断电梯是否可以在当前楼层接载乘客
+     * @param elevator 电梯对象
+     * @param floor 当前楼层
+     * @param leaveElevator 是否有乘客要离开电梯
+     * @return true表示可以接载乘客，false表示不能接载
+     */
     public boolean canEnter(Elevator elevator, int floor, boolean leaveElevator) {
         int id = elevator.getId();
         return (!elevator.full() || leaveElevator) &&
@@ -112,15 +124,4 @@ public class Scheduler {
 
         return allEnter;
     }
-
-    private static int floorString2Int(String toFloorString) {
-        boolean negFlag;
-        if (toFloorString.substring(0,1).equals("B")) {
-            // 地下层
-            return -1 * Integer.parseInt(toFloorString.substring(1));
-        } else {
-            return Integer.parseInt(toFloorString.substring(1));
-        }
-    }
-
 }

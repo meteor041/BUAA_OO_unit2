@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.TreeSet;
 
+import static utils.FloorConverter.floorInt2String;
+
 public class Elevator implements Runnable {
     // 初始位置
     private final static int initPos = 1;
@@ -75,7 +77,7 @@ public class Elevator implements Runnable {
             }
 
             // 选取下一个目的楼层,确定运动方向
-            int targetFloor = target.getFirst();
+            int targetFloor = target.first();
             if (currentFloor < targetFloor) {
                 // 往上走
                 this.direction = Direction.UP;
@@ -165,31 +167,45 @@ public class Elevator implements Runnable {
         TimableOutput.println("ARRIVE-" + floorInt2String(currentFloor) + "-" + id);
     }
 
+    /**
+     * 获取电梯的唯一标识ID
+     * @return 电梯的ID
+     */
     public int getId() {
         return id;
     }
 
+    /**
+     * 检查电梯是否处于空闲状态
+     * @return true表示电梯空闲，false表示电梯正在运行
+     */
     public boolean isIdle() {
         return idle;
     }
 
+    /**
+     * 获取电梯当前所在的楼层
+     * @return 当前楼层，正数表示地上楼层，负数表示地下楼层
+     */
     public int getCurrentFloor() {
         return currentFloor;
     }
 
+    /**
+     * 获取电梯当前承载的乘客数量
+     * @return 当前乘客数量
+     */
     public int getCurrentNum() {
         return currentNum;
     }
 
+    /**
+     * 检查电梯是否已满载
+     * @return true表示电梯已满(达到最大承载人数)，false表示还有空位
+     */
     public boolean full() {
         return this.currentNum == max_num;
     }
 
-    private String floorInt2String(int floor) {
-        if (floor > 0) {
-            return "F" + floor;
-        } else {
-            return "B" + (-floor);
-        }
-    }
+
 }
