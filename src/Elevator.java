@@ -41,7 +41,7 @@ public class Elevator implements Runnable {
     }
 
     /**
-     * 添加电梯需要到达的楼层
+     * 添加电梯需要到达的楼层.若电梯此刻为空闲,则唤醒电梯线程
      *
      * @param floor
      */
@@ -50,12 +50,11 @@ public class Elevator implements Runnable {
     }
 
     /**
-     * 有人上电梯
+     * 模拟有人进入电梯
      *
      * @param request
      */
     public void addRequest(PersonRequest request, int floor) {
-        int elevatorId = request.getElevatorId();
         TimableOutput.println("IN-" + request.getPersonId() + "-" + request.getFromFloor() + "-" + this.id);
         ArrayList<PersonRequest> list = floor2req.getOrDefault(floor, new ArrayList<>());
         list.add(request);
@@ -157,13 +156,13 @@ public class Elevator implements Runnable {
             e.printStackTrace();
         }
         switch (this.direction) {
-            case Direction.UP:
+            case UP:
                 this.currentFloor++;
                 if (this.currentFloor == 0) {
                     this.currentFloor++;
                 }
                 break;
-            case Direction.DOWN:
+            case DOWN:
                 this.currentFloor--;
                 if (this.currentFloor == 0) {
                     this.currentFloor--;

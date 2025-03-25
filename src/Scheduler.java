@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static utils.FloorConverter.floorString2Int;
 import com.oocourse.elevator1.PersonRequest;
@@ -99,8 +100,8 @@ public class Scheduler {
         // 不管你上行还是下行,能接就接
         CopyOnWriteArrayList<PersonRequest> lineUp = waitingLineUp[floor+4][elevatorId];
         CopyOnWriteArrayList<PersonRequest> lineDown = waitingLineDown[floor+4][elevatorId];
-        Iterator<PersonRequest> iterUp = lineUp.iterator();
-        Iterator<PersonRequest> iterDown = lineDown.iterator();
+//        Iterator<PersonRequest> iterUp = lineUp.iterator();
+//        Iterator<PersonRequest> iterDown = lineDown.iterator();
         ArrayList<PersonRequest> upToKeep = new ArrayList<>();
         ArrayList<PersonRequest> downToKeep = new ArrayList<>();
 
