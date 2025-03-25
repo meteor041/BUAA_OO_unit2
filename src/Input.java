@@ -15,11 +15,6 @@ public class Input implements Runnable{
     @Override
     public void run() {
         ElevatorInput elevatorInput = new ElevatorInput(System.in);
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         while (true) {
             Request request = elevatorInput.nextRequest();
             if (request == null) {
@@ -34,6 +29,11 @@ public class Input implements Runnable{
         }
         try {
             elevatorInput.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        try {
+            Thread.sleep(100);
         } catch (Exception e) {
             e.printStackTrace();
         }
