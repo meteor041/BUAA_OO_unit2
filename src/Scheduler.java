@@ -1,11 +1,8 @@
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static utils.FloorConverter.floorString2Int;
 import com.oocourse.elevator1.PersonRequest;
-import com.oocourse.elevator1.Request;
 
 public class Scheduler {
     private static Scheduler instance;
@@ -47,20 +44,17 @@ public class Scheduler {
      * 处理新的乘客请求，分配电梯并加入等待队列
      * @param request 乘客请求对象，包含出发楼层、目标楼层等信息
      */
-    public synchronized void requestElevator(PersonRequest request) {
+    public synchronized void recieveRequest(PersonRequest request) {
         int elevatorId = request.getElevatorId();
         Elevator elevator = this.elevators.get(elevatorId - 1);
         Integer fromFloor = floorString2Int(request.getFromFloor());
         Integer toFloor = floorString2Int(request.getToFloor());
         addWaitingLine(request, fromFloor, toFloor, elevatorId);
         elevator.assign_floor(fromFloor);
-        
-        // 使用电梯对象作为锁，确保状态检查和线程启动的原子性
-//        synchronized (elevator) {
-            if (elevator.isIdle().compareAndSet(true, false)) {
-                new Thread(elevator).start(); // 再启动线程
-            }
-//        }
+
+        if (elevator.isIdle().compareAndSet(true, false)) {
+            new Thread(elevator).start(); // 再启动线程
+        }
     }
 
     /**
@@ -88,6 +82,7 @@ public class Scheduler {
         return (!elevator.full() || leaveElevator) &&
                 (waitingLineDown[floor+4][id].size() > 0 || waitingLineUp[floor+4][id].size() > 0);
     }
+
     /**
      * 电梯到达调度器指定的楼层
      * @param elevator
@@ -100,8 +95,6 @@ public class Scheduler {
         // 不管你上行还是下行,能接就接
         CopyOnWriteArrayList<PersonRequest> lineUp = waitingLineUp[floor+4][elevatorId];
         CopyOnWriteArrayList<PersonRequest> lineDown = waitingLineDown[floor+4][elevatorId];
-//        Iterator<PersonRequest> iterUp = lineUp.iterator();
-//        Iterator<PersonRequest> iterDown = lineDown.iterator();
         ArrayList<PersonRequest> upToKeep = new ArrayList<>();
         ArrayList<PersonRequest> downToKeep = new ArrayList<>();
 
@@ -109,7 +102,6 @@ public class Scheduler {
             int toFloor = floorString2Int(request.getToFloor());
             if (!elevator.full()) {
                 elevator.addRequest(request, toFloor);
-//                iterUp.remove();
             } else {
                 allEnter = false;
                 upToKeep.add(request);
@@ -121,7 +113,6 @@ public class Scheduler {
             int toFloor = floorString2Int(request.getToFloor());
             if (!elevator.full()) {
                 elevator.addRequest(request, toFloor);
-//                iterDown.remove();
             } else {
                 allEnter = false;
                 downToKeep.add(request);

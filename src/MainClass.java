@@ -17,7 +17,7 @@ public class MainClass {
                 // a new valid request
                 if (request instanceof PersonRequest) {
                     PersonRequest personRequest = (PersonRequest) request;
-                    scheduler.requestElevator(personRequest);
+                    scheduler.recieveRequest(personRequest);
                 }
             }
         }
