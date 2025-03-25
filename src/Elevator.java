@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static utils.FloorConverter.floorInt2String;
 
@@ -19,7 +20,7 @@ public class Elevator implements Runnable {
     // 电梯ID
     private final int id;
     // 当前电梯是否空闲
-    private boolean idle;
+    private AtomicBoolean idle;
     // 目标楼层列表
     TreeSet<Integer> target;
     // 目标楼层到楼层用户请求的映射
@@ -33,7 +34,7 @@ public class Elevator implements Runnable {
 
     public Elevator(int id) {
         this.id = id;
-        idle = true;
+        idle = new AtomicBoolean(true);
         target = new TreeSet<>();
         floor2req = new HashMap<>();
         currentFloor = initPos;
@@ -64,7 +65,12 @@ public class Elevator implements Runnable {
 
     @Override
     public void run() {
-        this.idle = false;
+//        this.idle.set(false);
+        try {
+            Thread.sleep(10);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         while (true) {
             // 根据上下乘客情况选择开关门
             openAndCloseDoor();
@@ -72,7 +78,7 @@ public class Elevator implements Runnable {
             // 判断电梯是否还有需要去往的楼层
             if (target.isEmpty()) {
                 // 这个电梯,不需要了
-                this.idle = true;
+                this.idle.set(true);
                 return;
             }
 
@@ -179,8 +185,8 @@ public class Elevator implements Runnable {
      * 检查电梯是否处于空闲状态
      * @return true表示电梯空闲，false表示电梯正在运行
      */
-    public boolean isIdle() {
-        return idle;
+    public AtomicBoolean isIdle() {
+        return this.idle;
     }
 
     /**
@@ -207,5 +213,7 @@ public class Elevator implements Runnable {
         return this.currentNum == max_num;
     }
 
-
+    public void setBusy() {
+        this.idle.set(false);
+    }
 }
