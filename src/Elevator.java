@@ -1,12 +1,19 @@
 import com.oocourse.elevator1.*;
 
+//import java.lang.management.ManagementFactory;
+//import java.lang.management.RuntimeMXBean;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static utils.FloorConverter.floorInt2String;
+//import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.Condition;
+//import java.util.concurrent.locks.Lock;
+//import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Elevator implements Runnable {
     // 初始位置
@@ -31,6 +38,10 @@ public class Elevator implements Runnable {
     int currentNum;
     // 当前运行方向
     Direction direction;
+    // 用于线程同步的锁和条件变量
+    private final Lock lock = new ReentrantLock();
+    private final Condition notEmpty = lock.newCondition();
+    private volatile boolean shouldTerminate = false; // 是否应该终止线程
 
     public Elevator(int id) {
         this.id = id;
@@ -45,8 +56,18 @@ public class Elevator implements Runnable {
      *
      * @param floor
      */
-    public void assign_floor(Integer floor) {
-        target.add(floor);
+    public void assignFloor(Integer floor) {
+        lock.lock();
+        try{
+            System.out.println("AssignFloor - target: " + target + ", idle: " + idle.get());
+            target.add(floor);
+            if (idle.compareAndSet(true, false)) {
+                System.out.println("Signaling elevator " + id + Thread.currentThread().getId());
+                notEmpty.signal();
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
@@ -55,44 +76,91 @@ public class Elevator implements Runnable {
      * @param request
      */
     public void addRequest(PersonRequest request, int floor) {
-        TimableOutput.println("IN-" + request.getPersonId() + "-" + request.getFromFloor() + "-" + this.id);
-        ArrayList<PersonRequest> list = floor2req.getOrDefault(floor, new ArrayList<>());
-        list.add(request);
-        floor2req.put(floor, list);
-        assign_floor(floor);
+        lock.lock();
+        try {
+            TimableOutput.println("IN-" + request.getPersonId() + "-" + request.getFromFloor() + "-" + this.id);
+            ArrayList<PersonRequest> list = floor2req.getOrDefault(floor, new ArrayList<>());
+            list.add(request);
+            floor2req.put(floor, list);
+            target.add(floor);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void setShouldTerminate(boolean shouldTerminate) {
+        System.out.println("Elevator thread" + id + " shouldTerminate: " + this.shouldTerminate);
+        lock.lock();
+        try {
+            this.shouldTerminate = shouldTerminate;
+            notEmpty.signal();
+        } finally {
+            lock.unlock();
+        }
+
     }
 
     @Override
     public void run() {
-//        this.idle.set(false);
         try {
-            Thread.sleep(10);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        while (true) {
-            // 根据上下乘客情况选择开关门
-            openAndCloseDoor();
+//            // 获取当前线程
+//            Thread currentThread = Thread.currentThread();
+//
+//            // 打印线程信息
+//            System.out.println("当前线程 ID: " + currentThread.getId());
+            while (!shouldTerminate || !target.isEmpty()) {
+                lock.lock();
+                try {
+                    // 判断电梯是否还有需要去往的楼层
+                    while (target.isEmpty() && !shouldTerminate) {
+                        // 这个电梯,不需要了
+                        try {
+                            System.out.println("Elevator thread" + id + " wait " + Thread.currentThread().getId());
+                            notEmpty.await();
+                            System.out.println("Elevator thread" + id + " awake " + Thread.currentThread().getId());
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
 
-            // 判断电梯是否还有需要去往的楼层
-            if (target.isEmpty()) {
-                // 这个电梯,不需要了
-                this.idle.set(true);
-                return;
+                    if (target.isEmpty() && shouldTerminate) {
+                        break;
+                    }
+
+                    // 根据上下乘客情况选择开关门
+                    openAndCloseDoor();
+
+                    if (target.isEmpty()) {
+                        // 这个电梯,不需要了
+                        idle.set(true);
+                        if (shouldTerminate) {
+                            break;
+                        }
+                        continue;
+                    }
+
+                    // 选取下一个目的楼层,确定运动方向
+                    int targetFloor = target.first();
+                    if (currentFloor < targetFloor) {
+                        // 往上走
+                        this.direction = Direction.UP;
+                    } else if (currentFloor > targetFloor) {
+                        // 往下走
+                        this.direction = Direction.DOWN;
+                    }
+
+
+
+                    moveTo();
+                } finally {
+                    lock.unlock();
+                }
+
             }
-
-            // 选取下一个目的楼层,确定运动方向
-            int targetFloor = target.first();
-            if (currentFloor < targetFloor) {
-                // 往上走
-                this.direction = Direction.UP;
-            } else if (currentFloor > targetFloor) {
-                // 往下走
-                this.direction = Direction.DOWN;
-            }
-
-            moveTo();
+        } finally {
+            System.out.println("Elevator thread" + id + " exiting");
         }
+
     }
 
     /**
@@ -107,41 +175,46 @@ public class Elevator implements Runnable {
      * 模拟电梯的开关门
      */
     private void openAndCloseDoor() {
+//        synchronized (lock) {
+        lock.lock();
+        try {
+            boolean leaveElevator = (floor2req.get(currentFloor) != null) && !floor2req.get(currentFloor).isEmpty();
+            boolean enterElevator = Scheduler.getInstance().canEnter(this, currentFloor, leaveElevator);
 
-        boolean leaveElevator = (floor2req.get(currentFloor) != null) && !floor2req.get(currentFloor).isEmpty();
-        boolean enterElevator = Scheduler.getInstance().canEnter(this, currentFloor, leaveElevator);
-
-        if (enterElevator || leaveElevator) {
-            TimableOutput.println("OPEN-" + floorInt2String(currentFloor) + "-" + this.id);
-        }
-        if (leaveElevator) {
-            // 有人需要离开
-            ArrayList<PersonRequest> list = floor2req.get(currentFloor);
-            for (int i = 0; i < list.size(); i++) {
-                PersonRequest request = list.get(i);
-                finishRequest(request);
+            if (enterElevator || leaveElevator) {
+                TimableOutput.println("OPEN-" + floorInt2String(currentFloor) + "-" + this.id);
             }
-            // 电梯上所有去往current_floor的都下了,删去该目的楼层
-            floor2req.remove(currentFloor);
-        }
-
-        boolean enterAll = Scheduler.getInstance().elevatorArrived(this, currentFloor);
-
-        // 如果有人要上下电梯,就得关门
-        if (enterElevator || leaveElevator) {
-            try {
-                Thread.sleep(min_gap);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            if (leaveElevator) {
+                // 有人需要离开
+                ArrayList<PersonRequest> list = floor2req.get(currentFloor);
+                for (int i = 0; i < list.size(); i++) {
+                    PersonRequest request = list.get(i);
+                    finishRequest(request);
+                }
+                // 电梯上所有去往current_floor的都下了,删去该目的楼层
+                floor2req.remove(currentFloor);
             }
-            TimableOutput.println("CLOSE-" + floorInt2String(currentFloor) + "-" + this.id);
-        }
 
-        // 到达当前楼层后,电梯上要下的乘客一定会下,要上的乘客不一定都能上.
-        // 如果要上的乘客都上了,就可以让target列表去除该楼层
-        target.remove(currentFloor);
-        if (!enterAll) {
-            target.add(currentFloor);
+            boolean enterAll = Scheduler.getInstance().elevatorArrived(this, currentFloor);
+
+            // 如果有人要上下电梯,就得关门
+            if (enterElevator || leaveElevator) {
+                try {
+                    Thread.sleep(min_gap);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                TimableOutput.println("CLOSE-" + floorInt2String(currentFloor) + "-" + this.id);
+            }
+
+            // 到达当前楼层后,电梯上要下的乘客一定会下,要上的乘客不一定都能上.
+            // 如果要上的乘客都上了,就可以让target列表去除该楼层
+            target.remove(currentFloor);
+            if (!enterAll) {
+                target.add(currentFloor);
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -155,21 +228,26 @@ public class Elevator implements Runnable {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        switch (this.direction) {
-            case UP:
-                this.currentFloor++;
-                if (this.currentFloor == 0) {
+        lock.lock();
+        try {
+            switch (this.direction) {
+                case UP:
                     this.currentFloor++;
-                }
-                break;
-            case DOWN:
-                this.currentFloor--;
-                if (this.currentFloor == 0) {
+                    if (this.currentFloor == 0) {
+                        this.currentFloor++;
+                    }
+                    break;
+                case DOWN:
                     this.currentFloor--;
-                }
-                break;
+                    if (this.currentFloor == 0) {
+                        this.currentFloor--;
+                    }
+                    break;
+            }
+            TimableOutput.println("ARRIVE-" + floorInt2String(currentFloor) + "-" + id);
+        } finally {
+            lock.unlock();
         }
-        TimableOutput.println("ARRIVE-" + floorInt2String(currentFloor) + "-" + id);
     }
 
     /**

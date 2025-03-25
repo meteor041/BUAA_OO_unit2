@@ -13,13 +13,17 @@ public class Scheduler {
     private final CopyOnWriteArrayList<PersonRequest>[][] waitingLineUp;
     // 下行的乘客列表
     private final CopyOnWriteArrayList<PersonRequest>[][] waitingLineDown;
+//    // 用户输入是否终止
+//    private volatile boolean end = false;
 
     public Scheduler() {
         elevators = new CopyOnWriteArrayList<>();
         waitingLineUp = new CopyOnWriteArrayList[NUM_FLOORS+1][NUM_ELEVATORS+1];
         waitingLineDown = new CopyOnWriteArrayList[NUM_FLOORS+1][NUM_ELEVATORS+1];
         for (int i = 1; i <= NUM_ELEVATORS; i++) {
-            elevators.add(new Elevator(i));
+            Elevator elevator = new Elevator(i);
+            elevators.add(elevator);
+            new Thread(elevator).start(); // 启动电梯线程
         }
         for (int i = 0; i <= NUM_FLOORS; i++) {
             for (int j = 0; j <= NUM_ELEVATORS; j++) {
@@ -40,28 +44,30 @@ public class Scheduler {
         return instance;
     }
 
+    public static void newRequest(PersonRequest request) {
+        System.out.println("-----------ID:" + Thread.currentThread().getId());
+        getInstance().recieveRequest(request);
+    }
+
     /**
      * 处理新的乘客请求，分配电梯并加入等待队列
      * @param request 乘客请求对象，包含出发楼层、目标楼层等信息
      */
     public synchronized void recieveRequest(PersonRequest request) {
+        System.out.println("Recieving request: " + request);
         int elevatorId = request.getElevatorId();
         Elevator elevator = this.elevators.get(elevatorId - 1);
         Integer fromFloor = floorString2Int(request.getFromFloor());
         Integer toFloor = floorString2Int(request.getToFloor());
         addWaitingLine(request, fromFloor, toFloor, elevatorId);
-        elevator.assign_floor(fromFloor);
-
-        if (elevator.isIdle().compareAndSet(true, false)) {
-            new Thread(elevator).start(); // 再启动线程
-        }
+        elevator.assignFloor(fromFloor);
     }
 
     /**
      * 将乘客加入等待队列
      * @param request
      */
-    private void addWaitingLine(PersonRequest request, int fromFloor,
+    private synchronized void addWaitingLine(PersonRequest request, int fromFloor,
                                 int toFloor, int elevatorId) {
         if (fromFloor < toFloor) {
             waitingLineUp[fromFloor+4][elevatorId].add(request);
@@ -89,7 +95,7 @@ public class Scheduler {
      * @param floor
      * @return 返回值表示是否有乘客在当前楼层上电梯
      */
-    public synchronized boolean elevatorArrived(Elevator elevator, int floor) {
+    public boolean elevatorArrived(Elevator elevator, int floor) {
         boolean allEnter = true;
         int elevatorId = elevator.getId();
         // 不管你上行还是下行,能接就接
@@ -121,5 +127,19 @@ public class Scheduler {
         waitingLineDown[floor+4][elevatorId] = new CopyOnWriteArrayList<>(downToKeep);
 
         return allEnter;
+    }
+
+//    public boolean isEnd() {
+//        return end;
+//    }
+
+//    public void setEnd(boolean end) {
+//        this.end = end;
+//    }
+
+    public void stopAllElevators() {
+        for (Elevator elevator : elevators) {
+            elevator.setShouldTerminate(true);
+        }
     }
 }
