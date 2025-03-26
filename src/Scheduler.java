@@ -4,6 +4,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import static utils.FloorConverter.floorString2Int;
 
 import com.oocourse.elevator1.PersonRequest;
+import com.oocourse.elevator1.Request;
 
 public class Scheduler {
     private static final Scheduler instance = new Scheduler();
@@ -70,8 +71,18 @@ public class Scheduler {
      * @return true表示可以接载乘客，false表示不能接载
      */
     public boolean canEnter(Elevator elevator, int floor, boolean leaveElevator) {
+        // 如果电梯满载且无人在此楼层下电梯,
+        // 则电梯一定无法新加乘客
+        if (elevator.full() && !leaveElevator) {
+            return false;
+        }
         int id = elevator.getId();
-        return (!elevator.full() || leaveElevator) && !getInstance().waitingLine[id].isEmpty();
+        for (PersonRequest request : waitingLine[id]) {
+            if (floorString2Int(request.getFromFloor()) == floor) {
+                return true;
+            }
+        }
+        return false;
     }
 
 
