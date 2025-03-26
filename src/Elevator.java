@@ -1,20 +1,25 @@
-import com.oocourse.elevator1.*;
+import com.oocourse.elevator1.PersonRequest;
+import com.oocourse.elevator1.TimableOutput;
 import utils.TimeFixer;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static utils.FloorConverter.*;
+import static utils.FloorConverter.floorString2Int;
+import static utils.FloorConverter.floorInt2String;
 
 public class Elevator implements Runnable {
     // 初始位置
-    private final static int initPos = 1;
+    private static final int initPos = 1;
     // 移动速度
-    private final static int move_time = 400; // unit: ms/层
+    private static final int move_time = 400; // unit: ms/层
     // 限制乘坐人数
-    private final static int max_num = 6;
+    private static final int max_num = 6;
     // 开门到关门之间的间隔
-    private final static int min_gap = 400; // unit: ms
+    private static final int min_gap = 400; // unit: ms
     // 电梯ID
     private final int id;
     // 当前电梯是否空闲
@@ -30,7 +35,7 @@ public class Elevator implements Runnable {
     // 是否应该终止线程
     private volatile boolean shouldTerminate = false;
     // 时间修正工具
-    private TimeFixer timeFixer;
+    private final TimeFixer timeFixer;
 
     public Elevator(int id) {
         this.id = id;
@@ -40,7 +45,8 @@ public class Elevator implements Runnable {
             if (i == 0) {
                 continue;
             }
-            floor2req.put(i, new TreeSet<>(Comparator.comparingInt((Passenger p) -> p.getRequest().getPriority())
+            floor2req.put(i, new TreeSet<>(Comparator.comparingInt(
+                    (Passenger p) -> p.getRequest().getPriority())
                     .reversed().thenComparingLong(Passenger::getEnterTime)));
         }
         currentFloor = initPos;
@@ -57,7 +63,8 @@ public class Elevator implements Runnable {
     public void passengerIn(Passenger passenger, int floor) {
         currentNum += 1;
         PersonRequest request = passenger.getRequest();
-        TimableOutput.println("IN-" + request.getPersonId() + "-" + request.getFromFloor() + "-" + this.id);
+        TimableOutput.println("IN-" + request.getPersonId() + 
+                "-" + request.getFromFloor() + "-" + this.id);
         floor2req.get(floor).add(passenger);
     }
 
@@ -68,8 +75,8 @@ public class Elevator implements Runnable {
      */
     public void setShouldTerminate(boolean shouldTerminate) {
         if (idle.get()) {
-            synchronized (Scheduler.getInstance().waitingLine.get(this.id - 1)) {
-                Scheduler.getInstance().waitingLine.get(this.id - 1).notify();
+            synchronized (Scheduler.getInstance().getWaitingLine(id)) {
+                Scheduler.getInstance().getWaitingLine(id).notify();
             }
         }
         this.shouldTerminate = shouldTerminate;
@@ -89,12 +96,12 @@ public class Elevator implements Runnable {
         // 2. 如果只有其他楼层的请求,我们根据距离和优先级判断最优的楼层选择,设置方向为前往对应楼层的方向
         int bestFloor = -10;
         int bestPriority = 0;
-        if (Scheduler.getInstance().waitingLine.get(this.id - 1).isEmpty()) {
+        if (Scheduler.getInstance().getWaitingLine(id).isEmpty()) {
             // 如果等待列表为空,说明电梯线程这次被终止信号唤醒
             // 不要为它选择方向
             return;
         }
-        for (Passenger passenger : Scheduler.getInstance().waitingLine.get(this.id - 1)) {
+        for (Passenger passenger : Scheduler.getInstance().getWaitingLine(id)) {
             PersonRequest request = passenger.getRequest();
             int floor = floorString2Int(request.getFromFloor());
             if (floor == currentFloor) {
@@ -128,30 +135,24 @@ public class Elevator implements Runnable {
 
     @Override
     public void run() {
-//            // 获取当前线程
-//            Thread currentThread = Thread.currentThread();
-//
-//            // 打印线程信息
-//            System.out.println("当前线程 ID: " + currentThread.getId());
         // 判断电梯是否还有需要去往的楼层
         while (true) {
-            synchronized (Scheduler.getInstance().waitingLine.get(this.id - 1)) {
-                if ((Scheduler.getInstance().waitingLine.get(this.id - 1).isEmpty() && currentNum == 0) && !shouldTerminate) {
+            synchronized (Scheduler.getInstance().getWaitingLine(id)) {
+                if ((Scheduler.getInstance().getWaitingLine(id).isEmpty() 
+                        && currentNum == 0) && !shouldTerminate) {
                     // 这个电梯,不需要了
                     try {
-//                        TimableOutput.println("Elevator thread" + id + " wait " + Thread.currentThread().getId());
                         // 等待用户的请求输入
-                        Scheduler.getInstance().waitingLine.get(this.id - 1).wait();
+                        Scheduler.getInstance().getWaitingLine(id).wait();
                         timeFixer.init();
-//                        TimableOutput.println("Elevator thread" + id + " awake " + Thread.currentThread().getId());
                         elevatorAwake();
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
 
-                if (Scheduler.getInstance().waitingLine.get(this.id - 1).isEmpty() && currentNum == 0 && shouldTerminate) {
-//                System.out.println("here Elevator thread" + id + " 这个电梯,不需要了 " + Thread.currentThread().getId());
+                if (Scheduler.getInstance().getWaitingLine(id).isEmpty() 
+                        && currentNum == 0 && shouldTerminate) {
                     return;
                 }
                 // 选择电梯方向
@@ -160,10 +161,10 @@ public class Elevator implements Runnable {
                 // 根据上下乘客情况选择开关门
                 openAndCloseDoor();
 
-                if (Scheduler.getInstance().waitingLine.get(this.id - 1).isEmpty() && currentNum == 0) {
+                if (Scheduler.getInstance().getWaitingLine(id).isEmpty() 
+                        && currentNum == 0) {
                     // 这个电梯,不需要了
                     if (shouldTerminate) {
-//                    System.out.println("Elevator thread" + id + " 这个电梯,不需要了 " + Thread.currentThread().getId());
                         return;
                     }
                     idle.set(true);
@@ -192,7 +193,7 @@ public class Elevator implements Runnable {
         int bestFloorPriority = 0;
         long bestFloorEnterTime = 999999999L;
         // 优先查看当前楼层外等待的用户
-        for (Passenger passenger : Scheduler.getInstance().waitingLine.get(this.id - 1)) {
+        for (Passenger passenger : Scheduler.getInstance().getWaitingLine(id)) {
             PersonRequest request = passenger.getRequest();
             long enterTime = passenger.getEnterTime();
             int floor = floorString2Int(request.getFromFloor());
@@ -200,7 +201,8 @@ public class Elevator implements Runnable {
                 status = 2;
                 int toFloor = floorString2Int(request.getToFloor());
                 int priority = request.getPriority();
-                if (priority > bestFloorPriority || (priority == bestFloorPriority && enterTime < bestFloorEnterTime)) {
+                if (priority > bestFloorPriority || (priority == bestFloorPriority 
+                        && enterTime < bestFloorEnterTime)) {
                     bestFloor = toFloor;
                     bestFloorPriority = priority;
                     bestFloorEnterTime = enterTime;
@@ -213,7 +215,8 @@ public class Elevator implements Runnable {
                 status = 1;
                 int fromFloor = floorString2Int(request.getFromFloor());
                 int priority = request.getPriority();
-                if (priority > bestFloorPriority || (priority == bestFloorPriority && enterTime < bestFloorEnterTime)) {
+                if (priority > bestFloorPriority || 
+                        (priority == bestFloorPriority && enterTime < bestFloorEnterTime)) {
                     bestFloor = fromFloor;
                     bestFloorPriority = priority;
                     bestFloorEnterTime = enterTime;
@@ -248,7 +251,7 @@ public class Elevator implements Runnable {
                 }
                 // 如果当前电梯未满载,可以判断电梯外等待中的乘客请求
                 if (!this.full()) {
-                    for (Passenger passenger : Scheduler.getInstance().waitingLine.get(id - 1)) {
+                    for (Passenger passenger : Scheduler.getInstance().getWaitingLine(id)) {
                         int fromFloor = floorString2Int(passenger.getRequest().getFromFloor());
                         if (fromFloor > currentFloor) {
                             // 电梯方向保持不变
@@ -275,7 +278,7 @@ public class Elevator implements Runnable {
                 }
                 // 如果当前电梯未满载,可以判断电梯外等待中的乘客请求
                 if (!this.full()) {
-                    for (Passenger passenger : Scheduler.getInstance().waitingLine.get(id - 1)) {
+                    for (Passenger passenger : Scheduler.getInstance().getWaitingLine(id)) {
                         int fromFloor = floorString2Int(passenger.getRequest().getFromFloor());
                         if (fromFloor < currentFloor) {
                             // 电梯方向保持不变
@@ -305,7 +308,8 @@ public class Elevator implements Runnable {
     private void passengerOut(Passenger passenger) {
         currentNum--;
         PersonRequest request = passenger.getRequest();
-        TimableOutput.println("OUT-" + request.getPersonId() + "-" + request.getToFloor() + "-" + this.id);
+        TimableOutput.println("OUT-" + request.getPersonId() + 
+                "-" + request.getToFloor() + "-" + this.id);
     }
 
     /**
@@ -341,7 +345,7 @@ public class Elevator implements Runnable {
             // 如果这开关门400ms间隔内有新加入的乘客,我们也要让他能进就进
             // 因此只要电梯门开了,我们都要调用该方法,让乘客进来
             // 乘客进入电梯
-            passengerIn();
+            passengersIn();
         }
         if (enterElevator || leaveElevator) {
             TimableOutput.println("CLOSE-" + floorInt2String(currentFloor) + "-" + this.id);
@@ -352,9 +356,9 @@ public class Elevator implements Runnable {
     /**
      * 电梯到达调度器指定的楼层
      */
-    private void passengerIn() {
+    private void passengersIn() {
         // 不管你上行还是下行,能接就接
-        TreeSet<Passenger> line = Scheduler.getInstance().waitingLine.get(id - 1);
+        TreeSet<Passenger> line = Scheduler.getInstance().getWaitingLine(id);
         Iterator<Passenger> iterator = line.iterator();
         while (iterator.hasNext()) {
             Passenger passenger = iterator.next();
@@ -386,6 +390,8 @@ public class Elevator implements Runnable {
                     this.currentFloor--;
                 }
                 break;
+            default:
+                throw new IllegalArgumentException("No such direction");
         }
         TimableOutput.println("ARRIVE-" + floorInt2String(currentFloor) + "-" + id);
         timeFixer.init();
