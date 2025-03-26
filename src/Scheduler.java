@@ -40,6 +40,10 @@ public class Scheduler {
         return instance;
     }
 
+    /**
+     *  处理新的请求
+     * @param request 新的请求
+     */
     public static void newRequest(PersonRequest request) {
 //        System.out.println("-----------ID:" + Thread.currentThread().getId());
         getInstance().recieveRequest(request);
@@ -83,9 +87,9 @@ public class Scheduler {
         return false;
     }
 
-
-
-
+    /**
+     * 接收InputThread发送的停止输入信号,将其转发给每个电梯线程
+     */
     public void stopAllElevators() {
         for (Elevator elevator : elevators) {
             elevator.setShouldTerminate(true);
