@@ -1,22 +1,8 @@
 import com.oocourse.elevator1.*;
-
-//import java.lang.management.ManagementFactory;
-//import java.lang.management.RuntimeMXBean;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.TreeSet;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
-//import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.Condition;
 
 import static utils.FloorConverter.*;
-//import java.util.concurrent.locks.Lock;
-//import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Elevator implements Runnable {
     private static final int NUM_FLOORS = 11;
@@ -33,7 +19,7 @@ public class Elevator implements Runnable {
     // 当前电梯是否空闲
     private final AtomicBoolean idle;
     // 目标楼层到楼层用户请求的映射
-    HashMap<Integer, ArrayList<PersonRequest>> floor2req;
+    HashMap<Integer, TreeSet<PersonRequest>> floor2req;
     // 当前所在楼层
     int currentFloor;
     // 当前乘坐电梯人数
@@ -47,6 +33,13 @@ public class Elevator implements Runnable {
         this.id = id;
         idle = new AtomicBoolean(true);
         floor2req = new HashMap<>();
+        for (int i = -4; i <= 7; i++) {
+            if (i == 0) {
+                continue;
+            }
+            floor2req.put(i, new TreeSet<>(Comparator.comparingInt(PersonRequest::getPriority)
+                    .reversed().thenComparingInt(PersonRequest::getPersonId)));
+        }
         currentFloor = initPos;
         direction = Direction.DUNNO;
     }
@@ -59,9 +52,7 @@ public class Elevator implements Runnable {
     public void passengerIn(PersonRequest request, int floor) {
         currentNum += 1;
         TimableOutput.println("IN-" + request.getPersonId() + "-" + request.getFromFloor() + "-" + this.id);
-        ArrayList<PersonRequest> list = floor2req.getOrDefault(floor, new ArrayList<>());
-        list.add(request);
-        floor2req.put(floor, list);
+        floor2req.get(floor).add(request);
     }
 
     public void setShouldTerminate(boolean shouldTerminate) {
@@ -135,7 +126,7 @@ public class Elevator implements Runnable {
             int bestFloorMaxPriority = 0;
             int bestFloorNum = 0;
             for (Integer floor : floor2req.keySet()) {
-                if (floor2req.get(floor) != null && !floor2req.get(floor).isEmpty()) {
+                if (!floor2req.get(floor).isEmpty()) {
                     int floorDistance = calFloorDistance(floor, currentFloor);
                     int priority = floor2req.get(floor).getFirst().getPriority();
                     int num = floor2req.get(floor).size();
@@ -205,7 +196,7 @@ public class Elevator implements Runnable {
                 break;
             case UP:
                 for (Integer floor : floor2req.keySet()) {
-                    if (floor2req.get(floor) != null && !floor2req.get(floor).isEmpty()) {
+                    if (!floor2req.get(floor).isEmpty()) {
                         if (floor > currentFloor) {
                             flag = true;
                             break;
@@ -230,7 +221,7 @@ public class Elevator implements Runnable {
             case DOWN:
 
                 for (Integer floor : floor2req.keySet()) {
-                    if (floor2req.get(floor) != null && !floor2req.get(floor).isEmpty()) {
+                    if (!floor2req.get(floor).isEmpty()) {
                         if (floor < currentFloor) {
                             flag = true;
                             break;
@@ -265,8 +256,9 @@ public class Elevator implements Runnable {
      *
      * @param request
      */
-    private void finishRequest(PersonRequest request) {
+    private void passengerOut(PersonRequest request) {
         currentNum--;
+        floor2req.get(currentFloor).remove(request);
         TimableOutput.println("OUT-" + request.getPersonId() + "-" + currentFloor + "-" + this.id);
     }
 
@@ -275,7 +267,7 @@ public class Elevator implements Runnable {
      */
     private void openAndCloseDoor() {
         System.out.println("try to open and close" + Thread.currentThread().getId());
-        boolean leaveElevator = (floor2req.get(currentFloor) != null) && !floor2req.get(currentFloor).isEmpty();
+        boolean leaveElevator = !floor2req.get(currentFloor).isEmpty();
         boolean enterElevator = Scheduler.getInstance().canEnter(this, currentFloor, leaveElevator);
 
         if (enterElevator || leaveElevator) {
@@ -283,13 +275,10 @@ public class Elevator implements Runnable {
         }
         if (leaveElevator) {
             // 有人需要离开
-            ArrayList<PersonRequest> list = floor2req.get(currentFloor);
-            for (int i = 0; i < list.size(); i++) {
-                PersonRequest request = list.get(i);
-                finishRequest(request);
+            TreeSet<PersonRequest> list = floor2req.get(currentFloor);
+            for (PersonRequest request : list) {
+                passengerOut(request);
             }
-            // 电梯上所有去往current_floor的都下了,删去该目的楼层
-            floor2req.remove(currentFloor);
         }
 
         // 如果有人要上下电梯,就得关门
@@ -301,7 +290,7 @@ public class Elevator implements Runnable {
             }
         }
         // 乘客进入电梯
-        enterPassenger();
+        passengerIn();
         if (enterElevator || leaveElevator) {
             TimableOutput.println("CLOSE-" + floorInt2String(currentFloor) + "-" + this.id);
         }
@@ -312,7 +301,7 @@ public class Elevator implements Runnable {
      *
      * @return 返回值表示是否有乘客在当前楼层上电梯
      */
-    private void enterPassenger() {
+    private void passengerIn() {
         // 不管你上行还是下行,能接就接
         TreeSet<PersonRequest> line = Scheduler.getInstance().waitingLine.get(id-1);
         Iterator<PersonRequest> iterator = line.iterator();
