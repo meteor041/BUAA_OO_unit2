@@ -41,7 +41,7 @@ public class Scheduler {
     }
 
     public static void newRequest(PersonRequest request) {
-        System.out.println("-----------ID:" + Thread.currentThread().getId());
+//        System.out.println("-----------ID:" + Thread.currentThread().getId());
         getInstance().recieveRequest(request);
     }
 
@@ -51,10 +51,10 @@ public class Scheduler {
      * @param request 乘客请求对象，包含出发楼层、目标楼层等信息
      */
     public void recieveRequest(PersonRequest request) {
-        System.out.println("Recieving request: " + request);
+//        System.out.println("Recieving request: " + request);
         int elevatorId = request.getElevatorId();
         synchronized (getInstance().waitingLine.get(elevatorId-1)) {
-            System.out.println("Waiting for elevator: " + elevatorId);
+//            System.out.println("Waiting for elevator: " + elevatorId);
             waitingLine.get(elevatorId-1).add(request);
             getInstance().waitingLine.get(elevatorId-1).notify();
         }
