@@ -38,9 +38,7 @@ public class Elevator implements Runnable {
     int currentNum;
     // 当前运行方向
     Direction direction;
-    // 用于线程同步的锁和条件变量
-//    private final Lock lock = new ReentrantLock();
-//    private final Condition notEmpty = lock.newCondition();
+
     private volatile boolean shouldTerminate = false; // 是否应该终止线程
 
     public Elevator(int id) {
@@ -93,6 +91,7 @@ public class Elevator implements Runnable {
                         // 等待用户的请求输入
                         Scheduler.getInstance().waitingLine[this.id].wait();
                         idle.set(false);
+                        direction = Direction.DUNNO;
                         System.out.println(idle);
                         System.out.println("Elevator thread" + id + " awake " + Thread.currentThread().getId());
                     } catch (InterruptedException e) {
@@ -122,7 +121,9 @@ public class Elevator implements Runnable {
         }
     }
 
-
+    /**
+     * 基于LOOK策略,不关注乘客的优先级,进行电梯的方向选择
+     */
     public void chooseDir() {
         System.out.println("Elevator thread" + id + " chooseDir");
         boolean flag = false;
@@ -138,10 +139,13 @@ public class Elevator implements Runnable {
                         }
                     }
                 }
-                for (PersonRequest request : Scheduler.getInstance().waitingLine[id]) {
-                    if (floorString2Int(request.getFromFloor()) > currentFloor) {
-                        flag = true;
-                        break;
+                // 如果当前电梯未满载,可以判断电梯外等待中的乘客请求
+                if (!this.full()) {
+                    for (PersonRequest request : Scheduler.getInstance().waitingLine[id]) {
+                        if (floorString2Int(request.getFromFloor()) > currentFloor) {
+                            flag = true;
+                            break;
+                        }
                     }
                 }
                 if (flag) {
@@ -151,6 +155,7 @@ public class Elevator implements Runnable {
                 }
                 break;
             case DOWN:
+
                 for (Integer floor : floor2req.keySet()) {
                     if (floor2req.get(floor) != null && !floor2req.get(floor).isEmpty()) {
                         if (floor < currentFloor) {
@@ -159,11 +164,14 @@ public class Elevator implements Runnable {
                         }
                     }
                 }
-                if (!flag) {
-                    for (PersonRequest request : Scheduler.getInstance().waitingLine[id]) {
-                        if (floorString2Int(request.getFromFloor()) < currentFloor) {
-                            flag = true;
-                            break;
+                // 如果当前电梯未满载,可以判断电梯外等待中的乘客请求
+                if (!this.full()) {
+                    if (!flag) {
+                        for (PersonRequest request : Scheduler.getInstance().waitingLine[id]) {
+                            if (floorString2Int(request.getFromFloor()) < currentFloor) {
+                                flag = true;
+                                break;
+                            }
                         }
                     }
                 }
