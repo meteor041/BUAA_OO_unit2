@@ -197,7 +197,6 @@ public class Elevator implements Runnable {
      */
     private void openAndCloseDoor() {
 //        System.out.println("try to open and close");
-//        synchronized (target) {
         boolean leaveElevator = (floor2req.get(currentFloor) != null) && !floor2req.get(currentFloor).isEmpty();
         boolean enterElevator = Scheduler.getInstance().canEnter(this, currentFloor, leaveElevator);
 
@@ -226,17 +225,6 @@ public class Elevator implements Runnable {
             }
             TimableOutput.println("CLOSE-" + floorInt2String(currentFloor) + "-" + this.id);
         }
-
-//        // 到达当前楼层后,电梯上要下的乘客一定会下,要上的乘客不一定都能上.
-//        // 如果要上的乘客都上了,就可以让target列表去除该楼层
-//        Scheduler.getInstance().waitingLine[id].remove(currentFloor);
-//        if (!enterAll) {
-//            target.add(currentFloor);
-//        }
-//        }
-//        } finally {
-//            lock.unlock();
-//        }
     }
 
     /**
