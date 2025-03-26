@@ -155,7 +155,7 @@ public class Elevator implements Runnable {
                 break;
             case DOWN:
                 for (Integer floor : floor2req.keySet()) {
-                    if (floor2req.get(floor) != null && floor2req.get(floor).isEmpty()) {
+                    if (floor2req.get(floor) != null && !floor2req.get(floor).isEmpty()) {
                         if (floor < currentFloor) {
                             flag = true;
                             break;
