@@ -22,7 +22,7 @@ public class Scheduler {
         for (int i = 0; i < NUM_FLOORS; i++) {
             // 使用 Comparator.comparingInt(Passenger::getPriority).reversed() 使优先级高的排前面
             waitingLine.add(new TreeSet<>(Comparator.comparingInt((Passenger p) -> p.getRequest().getPriority())
-                    .reversed().thenComparingInt(Passenger::getEnterTime)));
+                    .reversed().thenComparingLong(Passenger::getEnterTime)));
         }
         for (int i = 1; i <= NUM_ELEVATORS; i++) {
             Elevator elevator = new Elevator(i);

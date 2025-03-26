@@ -16,7 +16,7 @@ public class InputThread implements Runnable{
      * 实现电梯系统的主要输入处理循环。
      * <p>
      * 此方法作为输入线程的入口点。它使用一个 {@link ElevatorInput} 持续从标准输入 (System.in) 读取 {@link Request} 对象。
-     * 有效的 {@link PersonRequest} 对象会被提取出来，并通过 {@link Scheduler#newRequest(PersonRequest)} 分发给核心 {@link Scheduler}。
+     * 有效的 {@link PersonRequest} 对象会被提取出来，并通过 {@link Scheduler#newRequest(Passenger)} 分发给核心 {@link Scheduler}。
      * </p>
      * <p>
      * 该循环会一直持续，直到 {@code ElevatorInput} 通过返回 {@code null} 来标志输入结束。
@@ -49,7 +49,7 @@ public class InputThread implements Runnable{
                 // a new valid request
                 if (request instanceof PersonRequest) {
                     PersonRequest personRequest = (PersonRequest) request;
-                    Passenger passenger = new Passenger(enterTime++, personRequest);
+                    Passenger passenger = new Passenger(personRequest);
                     Scheduler.newRequest(passenger);
                 }
             }
