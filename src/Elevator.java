@@ -226,7 +226,7 @@ public class Elevator implements Runnable {
             }
             return;
         }
-        // 若电梯内无人,通过优先级寻找最优方向
+        // 若电梯内无人,通过距离,优先级寻找最优方向
         Integer bestFloor = -10;
         int minDistance = 99;
         int bestFloorPriority = 0;
