@@ -7,7 +7,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import static utils.FloorConverter.floorString2Int;
 
 import com.oocourse.elevator1.PersonRequest;
-import com.oocourse.elevator1.Request;
 
 public class Scheduler {
     private static final Scheduler instance = new Scheduler();
@@ -55,7 +54,7 @@ public class Scheduler {
      * @param request 乘客请求对象，包含出发楼层、目标楼层等信息
      */
     public void recieveRequest(PersonRequest request) {
-//        System.out.println("Recieving request: " + request);
+//        TimableOutput.println("Recieving request: " + request);
         int elevatorId = request.getElevatorId();
         synchronized (getInstance().waitingLine.get(elevatorId-1)) {
 //            System.out.println("Waiting for elevator: " + elevatorId);

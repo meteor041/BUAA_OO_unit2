@@ -1,11 +1,12 @@
 import com.oocourse.elevator1.*;
+import utils.TimeFixer;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static utils.FloorConverter.*;
 
 public class Elevator implements Runnable {
-    private static final int NUM_FLOORS = 11;
     // 初始位置
     private final static int initPos = 1;
     // 移动速度
@@ -21,13 +22,15 @@ public class Elevator implements Runnable {
     // 目标楼层到楼层用户请求的映射
     private final HashMap<Integer, TreeSet<PersonRequest>> floor2req;
     // 当前所在楼层
-    int currentFloor;
+    private int currentFloor;
     // 当前乘坐电梯人数
-    int currentNum;
+    private int currentNum;
     // 当前运行方向
-    Direction direction;
-
-    private volatile boolean shouldTerminate = false; // 是否应该终止线程
+    private Direction direction;
+    // 是否应该终止线程
+    private volatile boolean shouldTerminate = false;
+    // 时间修正工具
+    private TimeFixer timeFixer;
 
     public Elevator(int id) {
         this.id = id;
@@ -42,6 +45,7 @@ public class Elevator implements Runnable {
         }
         currentFloor = initPos;
         direction = Direction.DUNNO;
+        timeFixer = new TimeFixer();
     }
 
     /**
@@ -70,6 +74,57 @@ public class Elevator implements Runnable {
         this.shouldTerminate = shouldTerminate;
     }
 
+    /**
+     * 电梯进程被唤醒后立即进行的相关操作
+     * 1. 修改空闲标志
+     * 2. 启动时间修正器
+     * 2. 确定方向
+     * 3. 决定是否进行量子移动
+     */
+    public void elevatorAwake() {
+        idle.set(false);
+        // 遍历当前存在的请求
+        // 1. 如果存在同楼层的请求,则放弃量子移动,方向设置为DUNNO
+        // 2. 如果只有其他楼层的请求,我们根据距离和优先级判断最优的楼层选择,设置方向为前往对应楼层的方向
+        int bestFloor = -10;
+        int minDistance = 100;
+        int bestPriority = 0;
+        if (Scheduler.getInstance().waitingLine.get(this.id-1).isEmpty()) {
+            // 如果等待列表为空,说明电梯线程这次被终止信号唤醒
+            // 不要为它选择方向
+            return;
+        }
+        for (PersonRequest request : Scheduler.getInstance().waitingLine.get(this.id-1)) {
+            int floor = floorString2Int(request.getFromFloor());
+            if (floor == currentFloor) {
+                direction = Direction.DUNNO;
+                return;
+            }
+            int floorDistance = calFloorDistance(floor, currentFloor);
+            int priority = request.getPriority();
+            if (floorDistance < minDistance) {
+                // 更新最小距离和最优楼层
+                bestFloor = floor;
+                minDistance = floorDistance;
+                bestPriority = priority;
+            } else if (minDistance == floorDistance && priority > bestPriority) {
+                bestFloor = floor;
+                bestPriority = priority;
+            }
+        }
+        if (bestFloor > currentFloor) {
+            direction = Direction.UP;
+            moveTo();
+        } else if (bestFloor < currentFloor) {
+            direction = Direction.DOWN;
+            moveTo();
+        } else {
+            throw new IllegalArgumentException("Wrong move");
+        }
+        // 如果电梯产生了幽灵移动,从用户接收信息到电梯瞬间幽灵移动
+        // 的这段时间是不可避免的,此时我们要重置timeFixer
+        timeFixer.init();
+    }
 
     @Override
     public void run() {
@@ -84,18 +139,19 @@ public class Elevator implements Runnable {
                 synchronized (Scheduler.getInstance().waitingLine.get(this.id-1)) {
                     // 这个电梯,不需要了
                     try {
-//                        System.out.println("Elevator thread" + id + " wait " + Thread.currentThread().getId());
+//                        TimableOutput.println("Elevator thread" + id + " wait " + Thread.currentThread().getId());
                         // 等待用户的请求输入
                         Scheduler.getInstance().waitingLine.get(this.id-1).wait();
-                        idle.set(false);
-                        direction = Direction.DUNNO;
+                        timeFixer.init();
+//                        TimableOutput.println("Elevator thread" + id + " awake " + Thread.currentThread().getId());
+                        elevatorAwake();
 //                        System.out.println(idle);
-//                        System.out.println("Elevator thread" + id + " awake " + Thread.currentThread().getId());
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
             }
+//            timeFixer.init();
             if (Scheduler.getInstance().waitingLine.get(this.id-1).isEmpty() && currentNum == 0 && shouldTerminate) {
 //                System.out.println("here Elevator thread" + id + " 这个电梯,不需要了 " + Thread.currentThread().getId());
                 return;
@@ -114,6 +170,14 @@ public class Elevator implements Runnable {
                 continue;
             }
             chooseDir();
+            // 模拟电梯运动所消耗的时间
+            try {
+                long gap = timeFixer.archive();
+                Thread.sleep(this.move_time - gap);
+                timeFixer.init();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             moveTo();
         }
     }
@@ -275,6 +339,7 @@ public class Elevator implements Runnable {
 
         if (enterElevator || leaveElevator) {
             TimableOutput.println("OPEN-" + floorInt2String(currentFloor) + "-" + this.id);
+            timeFixer.init();
         }
         if (leaveElevator) {
             // 有人需要离开
@@ -285,25 +350,29 @@ public class Elevator implements Runnable {
             list.clear();
         }
 
-        // 如果有人要上下电梯,就得关门
+        // 如果有人要上下电梯,就得依次完成门保持开着400ms和接收乘客的操作
         if (enterElevator || leaveElevator) {
             try {
-                Thread.sleep(min_gap);
+                long gap = timeFixer.archive();
+                Thread.sleep(min_gap - gap);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+            // 为什么这里不可以只在enterElevator为真的时候调用passengerIn()方法?
+            // enterElevator是开门时检测有无乘客进入的结果,
+            // 如果这开关门400ms间隔内有新加入的乘客,我们也要让他能进就进
+            // 因此只要电梯门开了,我们都要调用该方法,让乘客进来
+            // 乘客进入电梯
+            passengerIn();
         }
-        // 乘客进入电梯
-        passengerIn();
         if (enterElevator || leaveElevator) {
             TimableOutput.println("CLOSE-" + floorInt2String(currentFloor) + "-" + this.id);
+            timeFixer.init();
         }
     }
 
     /**
      * 电梯到达调度器指定的楼层
-     *
-     * @return 返回值表示是否有乘客在当前楼层上电梯
      */
     private void passengerIn() {
         // 不管你上行还是下行,能接就接
@@ -323,12 +392,6 @@ public class Elevator implements Runnable {
      * 根据this.direction,实现电梯移动
      */
     private void moveTo() {
-        // 模拟电梯运动所消耗的时间
-        try {
-            Thread.sleep(this.move_time);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         switch (this.direction) {
             case UP:
                 this.currentFloor++;
@@ -344,6 +407,7 @@ public class Elevator implements Runnable {
                 break;
         }
         TimableOutput.println("ARRIVE-" + floorInt2String(currentFloor) + "-" + id);
+        timeFixer.init();
     }
 
     /**
@@ -353,25 +417,6 @@ public class Elevator implements Runnable {
      */
     public int getId() {
         return id;
-    }
-
-
-    /**
-     * 获取电梯当前所在的楼层
-     *
-     * @return 当前楼层，正数表示地上楼层，负数表示地下楼层
-     */
-    public int getCurrentFloor() {
-        return currentFloor;
-    }
-
-    /**
-     * 获取电梯当前承载的乘客数量
-     *
-     * @return 当前乘客数量
-     */
-    public int getCurrentNum() {
-        return currentNum;
     }
 
     /**
