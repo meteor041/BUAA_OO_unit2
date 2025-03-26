@@ -30,4 +30,15 @@ public class FloorConverter {
             return "B" + (-floor);
         }
     }
+
+    /**
+     * 计算两个楼层整数形式之间的距离
+     */
+    public static int calFloorDistance(int x, int y) {
+        if (x * y > 0) {
+            return (x > y) ? (x - y) : (y - x);
+        } else {
+            return (x > y) ? (x - y - 1) : (y - x - 1);
+        }
+    }
 }

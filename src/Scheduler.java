@@ -1,4 +1,7 @@
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.TreeSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static utils.FloorConverter.floorString2Int;
@@ -12,19 +15,19 @@ public class Scheduler {
     private static final int NUM_FLOORS = 11;
     private final CopyOnWriteArrayList<Elevator> elevators;
     // 等待中的乘客列表
-    public final CopyOnWriteArrayList<PersonRequest>[] waitingLine;
+    public final List<TreeSet<PersonRequest>> waitingLine;
 
     private Scheduler() {
         elevators = new CopyOnWriteArrayList<>();
-        waitingLine = new CopyOnWriteArrayList[NUM_ELEVATORS + 1];
-
+        waitingLine = new ArrayList<>(NUM_ELEVATORS);
+        for (int i = 0; i < NUM_FLOORS; i++) {
+            // 使用 Comparator.comparingInt(Passenger::getPriority).reversed() 使优先级高的排前面
+            waitingLine.add(new TreeSet<>(Comparator.comparingInt(PersonRequest::getPriority).reversed().thenComparingInt(PersonRequest::getPersonId)));
+        }
         for (int i = 1; i <= NUM_ELEVATORS; i++) {
             Elevator elevator = new Elevator(i);
             elevators.add(elevator);
             new Thread(elevator).start(); // 启动电梯线程
-        }
-        for (int i = 0; i <= NUM_ELEVATORS; i++) {
-            waitingLine[i] = new CopyOnWriteArrayList<>();
         }
     }
 
@@ -50,15 +53,10 @@ public class Scheduler {
     public void recieveRequest(PersonRequest request) {
         System.out.println("Recieving request: " + request);
         int elevatorId = request.getElevatorId();
-        synchronized (getInstance().waitingLine[elevatorId]) {
-//            try {
-//                Thread.sleep(1000);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
+        synchronized (getInstance().waitingLine.get(elevatorId-1)) {
             System.out.println("Waiting for elevator: " + elevatorId);
-            waitingLine[elevatorId].add(request);
-            getInstance().waitingLine[elevatorId].notify();
+            waitingLine.get(elevatorId-1).add(request);
+            getInstance().waitingLine.get(elevatorId-1).notify();
         }
     }
 
@@ -77,7 +75,7 @@ public class Scheduler {
             return false;
         }
         int id = elevator.getId();
-        for (PersonRequest request : waitingLine[id]) {
+        for (PersonRequest request : waitingLine.get(id-1)) {
             if (floorString2Int(request.getFromFloor()) == floor) {
                 return true;
             }
