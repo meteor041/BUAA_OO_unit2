@@ -29,9 +29,7 @@ public class Elevator implements Runnable {
     // 电梯ID
     private final int id;
     // 当前电梯是否空闲
-    private AtomicBoolean idle;
-    //    // 目标楼层列表
-//    private final TreeSet<Integer> target;
+    private final AtomicBoolean idle;
     // 目标楼层到楼层用户请求的映射
     HashMap<Integer, ArrayList<PersonRequest>> floor2req;
     // 当前所在楼层
@@ -41,14 +39,13 @@ public class Elevator implements Runnable {
     // 当前运行方向
     Direction direction;
     // 用于线程同步的锁和条件变量
-    private final Lock lock = new ReentrantLock();
-    private final Condition notEmpty = lock.newCondition();
+//    private final Lock lock = new ReentrantLock();
+//    private final Condition notEmpty = lock.newCondition();
     private volatile boolean shouldTerminate = false; // 是否应该终止线程
 
     public Elevator(int id) {
         this.id = id;
         idle = new AtomicBoolean(true);
-//        target = new TreeSet<>();
         floor2req = new HashMap<>();
         currentFloor = initPos;
         direction = Direction.DUNNO;
@@ -142,7 +139,7 @@ public class Elevator implements Runnable {
                     }
                 }
                 for (PersonRequest request : Scheduler.getInstance().waitingLine[id]) {
-                    if (floorString2Int(request.getToFloor()) > currentFloor) {
+                    if (floorString2Int(request.getFromFloor()) > currentFloor) {
                         flag = true;
                         break;
                     }
@@ -164,7 +161,7 @@ public class Elevator implements Runnable {
                 }
                 if (!flag) {
                     for (PersonRequest request : Scheduler.getInstance().waitingLine[id]) {
-                        if (floorString2Int(request.getToFloor()) < currentFloor) {
+                        if (floorString2Int(request.getFromFloor()) < currentFloor) {
                             flag = true;
                             break;
                         }
@@ -196,7 +193,7 @@ public class Elevator implements Runnable {
      * 模拟电梯的开关门
      */
     private void openAndCloseDoor() {
-//        System.out.println("try to open and close");
+        System.out.println("try to open and close" + Thread.currentThread().getId());
         boolean leaveElevator = (floor2req.get(currentFloor) != null) && !floor2req.get(currentFloor).isEmpty();
         boolean enterElevator = Scheduler.getInstance().canEnter(this, currentFloor, leaveElevator);
 
@@ -214,7 +211,8 @@ public class Elevator implements Runnable {
             floor2req.remove(currentFloor);
         }
 
-        loadPassenger();
+        // 乘客进入电梯
+        enterPassenger();
 
         // 如果有人要上下电梯,就得关门
         if (enterElevator || leaveElevator) {
@@ -232,7 +230,7 @@ public class Elevator implements Runnable {
      *
      * @return 返回值表示是否有乘客在当前楼层上电梯
      */
-    private void loadPassenger() {
+    private void enterPassenger() {
         // 不管你上行还是下行,能接就接
         CopyOnWriteArrayList<PersonRequest> line = Scheduler.getInstance().waitingLine[id];
         ArrayList<PersonRequest> lineToKeep = new ArrayList<>();
@@ -258,8 +256,6 @@ public class Elevator implements Runnable {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-//        lock.lock();
-//        synchronized (lock) {
         switch (this.direction) {
             case UP:
                 this.currentFloor++;
@@ -275,10 +271,6 @@ public class Elevator implements Runnable {
                 break;
         }
         TimableOutput.println("ARRIVE-" + floorInt2String(currentFloor) + "-" + id);
-//        }
-//        } finally {
-//            lock.unlock();
-//        }
     }
 
     /**
