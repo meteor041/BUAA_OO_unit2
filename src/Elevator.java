@@ -65,8 +65,6 @@ public class Elevator implements Runnable {
      * @param shouldTerminate
      */
     public void setShouldTerminate(boolean shouldTerminate) {
-//        System.out.println("Elevator thread" + id + " shouldTerminate: " + this.shouldTerminate + "Thread id: " + Thread.currentThread().getId());
-//        System.out.println("idle " + idle);
         if (idle.get()) {
             synchronized (Scheduler.getInstance().waitingLine.get(this.id - 1)) {
                 Scheduler.getInstance().waitingLine.get(this.id - 1).notify();
@@ -143,7 +141,6 @@ public class Elevator implements Runnable {
         while (true) {
             synchronized (Scheduler.getInstance().waitingLine.get(this.id - 1)) {
                 if ((Scheduler.getInstance().waitingLine.get(this.id - 1).isEmpty() && currentNum == 0) && !shouldTerminate) {
-
                     // 这个电梯,不需要了
                     try {
 //                        TimableOutput.println("Elevator thread" + id + " wait " + Thread.currentThread().getId());
@@ -152,17 +149,16 @@ public class Elevator implements Runnable {
                         timeFixer.init();
 //                        TimableOutput.println("Elevator thread" + id + " awake " + Thread.currentThread().getId());
                         elevatorAwake();
-//                        System.out.println(idle);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
 
-//            timeFixer.init();
                 if (Scheduler.getInstance().waitingLine.get(this.id - 1).isEmpty() && currentNum == 0 && shouldTerminate) {
 //                System.out.println("here Elevator thread" + id + " 这个电梯,不需要了 " + Thread.currentThread().getId());
                     return;
                 }
+
 
                 // 根据上下乘客情况选择开关门
                 openAndCloseDoor();
@@ -176,9 +172,9 @@ public class Elevator implements Runnable {
                     idle.set(true);
                     continue;
                 }
-
+                // 选择电梯方向
+                chooseDir();
             }
-            chooseDir();
             // 模拟电梯运动所消耗的时间
             try {
                 long gap = timeFixer.archive();
