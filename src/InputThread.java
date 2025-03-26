@@ -2,12 +2,12 @@ import com.oocourse.elevator1.ElevatorInput;
 import com.oocourse.elevator1.PersonRequest;
 import com.oocourse.elevator1.Request;
 
-public class Input implements Runnable{
-    private static Input instance;
-    private Input() {}
-    public static Input getInstance() {
+public class InputThread implements Runnable{
+    private static InputThread instance;
+    private InputThread() {}
+    public static InputThread getInstance() {
         if (instance == null) {
-            instance = new Input();
+            instance = new InputThread();
         }
         return instance;
     }

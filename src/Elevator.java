@@ -55,6 +55,10 @@ public class Elevator implements Runnable {
         floor2req.get(floor).add(request);
     }
 
+    /**
+     * 接收InputThread发送的输入结束信号
+     * @param shouldTerminate
+     */
     public void setShouldTerminate(boolean shouldTerminate) {
         System.out.println("Elevator thread" + id + " shouldTerminate: " + this.shouldTerminate + "Thread id: " + Thread.currentThread().getId());
         System.out.println("idle " + idle);
