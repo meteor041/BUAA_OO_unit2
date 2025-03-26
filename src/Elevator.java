@@ -77,10 +77,10 @@ public class Elevator implements Runnable {
 
     /**
      * 电梯进程被唤醒后立即进行的相关操作
-     * 1. 修改空闲标志
-     * 2. 启动时间修正器
-     * 2. 确定方向
-     * 3. 决定是否进行量子移动
+     * 1. 启动时间修正器
+     * 2. 修改空闲标志
+     * 3. 确定运动方向
+     * 4. 决定是否进行量子移动
      */
     public void elevatorAwake() {
         idle.set(false);
@@ -113,6 +113,14 @@ public class Elevator implements Runnable {
                 bestPriority = priority;
             }
         }
+        long gap = timeFixer.archive();
+        if (gap < min_gap) {
+            try {
+                Thread.sleep(min_gap-gap);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         if (bestFloor > currentFloor) {
             direction = Direction.UP;
             moveTo();
@@ -122,9 +130,6 @@ public class Elevator implements Runnable {
         } else {
             throw new IllegalArgumentException("Wrong move");
         }
-        // 如果电梯产生了幽灵移动,从用户接收信息到电梯瞬间幽灵移动
-        // 的这段时间是不可避免的,此时我们要重置timeFixer
-        timeFixer.init();
     }
 
     @Override
@@ -176,8 +181,8 @@ public class Elevator implements Runnable {
             chooseDir();
             // 模拟电梯运动所消耗的时间
             try {
-//                long gap = timeFixer.archive();
-                Thread.sleep(this.move_time);
+                long gap = timeFixer.archive();
+                Thread.sleep(this.move_time - gap);
                 timeFixer.init();
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -357,8 +362,8 @@ public class Elevator implements Runnable {
         // 如果有人要上下电梯,就得依次完成门保持开着400ms和接收乘客的操作
         if (enterElevator || leaveElevator) {
             try {
-//                long gap = timeFixer.archive();
-                Thread.sleep(min_gap);
+                long gap = timeFixer.archive();
+                Thread.sleep(min_gap - gap);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
