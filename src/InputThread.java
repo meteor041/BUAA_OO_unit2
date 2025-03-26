@@ -32,7 +32,7 @@ public class InputThread implements Runnable{
      * @see ElevatorInput
      * @see Request
      * @see PersonRequest
-     * @see Scheduler#newRequest(PersonRequest)
+     * @see Scheduler#newRequest(Passenger)
      * @see Scheduler#getInstance()
      * @see Scheduler#stopAllElevators()
      * @override // 表明此方法重写了父类或接口中的方法
@@ -40,6 +40,7 @@ public class InputThread implements Runnable{
     @Override
     public void run() {
         ElevatorInput elevatorInput = new ElevatorInput(System.in);
+        int enterTime = 0;
         while (true) {
             Request request = elevatorInput.nextRequest();
             if (request == null) {
@@ -48,7 +49,8 @@ public class InputThread implements Runnable{
                 // a new valid request
                 if (request instanceof PersonRequest) {
                     PersonRequest personRequest = (PersonRequest) request;
-                    Scheduler.newRequest(personRequest);
+                    Passenger passenger = new Passenger(enterTime++, personRequest);
+                    Scheduler.newRequest(passenger);
                 }
             }
         }
