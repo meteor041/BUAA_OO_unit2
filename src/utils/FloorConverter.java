@@ -9,7 +9,7 @@ public class FloorConverter {
      * @throws IllegalArgumentException 如果楼层字符串格式不正确。
      */
     public static int floorString2Int(String toFloorString) {
-        if (toFloorString.substring(0,1).equals("B")) {
+        if (toFloorString.substring(0, 1).equals("B")) {
             // 地下层
             return -1 * Integer.parseInt(toFloorString.substring(1));
         } else {

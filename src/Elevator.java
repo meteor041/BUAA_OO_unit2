@@ -42,7 +42,7 @@ public class Elevator implements Runnable {
                 continue;
             }
             floor2req.put(i, new TreeSet<>(Comparator.comparingInt(
-                    (Passenger p) -> p.getRequest().getPriority())
+                            (Passenger p) -> p.getRequest().getPriority())
                     .reversed().thenComparingLong(Passenger::getEnterTime)
                     .thenComparingInt((Passenger p) -> p.getRequest().getPersonId())));
         }
@@ -60,10 +60,10 @@ public class Elevator implements Runnable {
     public void passengerIn(Passenger passenger, int toFloor) {
         currentNum += 1;
         PersonRequest request = passenger.getRequest();
-        TimableOutput.println("IN-" + request.getPersonId() + 
+        TimableOutput.println("IN-" + request.getPersonId() +
                 "-" + request.getFromFloor() + "-" + this.id);
         floor2req.get(toFloor).add(passenger);
-//        System.out.println(passenger + " in : Current in Elevator:" + floor2req.get(toFloor));
+        // System.out.println(passenger + " in : Current in Elevator:" + floor2req.get(toFloor));
     }
 
     /**
@@ -133,7 +133,7 @@ public class Elevator implements Runnable {
         // 判断电梯是否还有需要去往的楼层
         while (true) {
             synchronized (Scheduler.getInstance().getWaitingLine(id)) {
-                if ((Scheduler.getInstance().getWaitingLine(id).isEmpty() 
+                if ((Scheduler.getInstance().getWaitingLine(id).isEmpty()
                         && currentNum == 0) && !shouldTerminate) {
                     try {
                         // System.out.println(id + "-wait:" + currentFloor);
@@ -160,7 +160,7 @@ public class Elevator implements Runnable {
                 // 根据上下乘客情况选择开关门
                 openAndCloseDoor(leaveElevator);
 
-                if (Scheduler.getInstance().getWaitingLine(id).isEmpty() 
+                if (Scheduler.getInstance().getWaitingLine(id).isEmpty()
                         && currentNum == 0) {
                     // System.out.println("电梯" + id +"开关门后直接shutdown: " +
                     // Scheduler.getInstance().getWaitingLine(id));
@@ -321,7 +321,7 @@ public class Elevator implements Runnable {
     private void passengerOut(Passenger passenger) {
         currentNum--;
         PersonRequest request = passenger.getRequest();
-        TimableOutput.println("OUT-" + request.getPersonId() + 
+        TimableOutput.println("OUT-" + request.getPersonId() +
                 "-" + request.getToFloor() + "-" + this.id);
     }
 
@@ -330,8 +330,8 @@ public class Elevator implements Runnable {
      */
     private void openAndCloseDoor(boolean leaveElevator) {
         boolean enterElevator = canEnter(leaveElevator);
-//        System.out.println(id + " : " + Scheduler.getInstance().getWaitingLine(id) +
-//                " floor2req : " + floor2req + " current_num :" + currentNum + " direction:" + direction);
+        // System.out.println(id + " : " + Scheduler.getInstance().getWaitingLine(id) +
+        // " floor2req : " + floor2req + " current_num :" + currentNum + " direction:" + direction);
         if (enterElevator || leaveElevator) {
             TimableOutput.println("OPEN-" + floorInt2String(currentFloor) + "-" + this.id);
             timeFixer.init();
@@ -343,7 +343,7 @@ public class Elevator implements Runnable {
                 passengerOut(passenger);
             }
             list.clear();
-//            System.out.println("list:" + list);
+            // System.out.println("list:" + list);
         }
 
         // 如果有人要上下电梯,就得依次完成门保持开着400ms和接收乘客的操作

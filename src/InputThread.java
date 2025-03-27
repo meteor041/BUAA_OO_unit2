@@ -5,7 +5,8 @@ import com.oocourse.elevator1.Request;
 public class InputThread implements Runnable {
     private static InputThread instance;
 
-    private InputThread() {}
+    private InputThread() {
+    }
 
     public static InputThread getInstance() {
         if (instance == null) {
@@ -32,13 +33,13 @@ public class InputThread implements Runnable {
      * </ol>
      * 此方法假设它在自己的线程中运行，并负责根据输入流的结束来发起电梯系统的关闭序列。
      *
+     * @Override // 表明此方法重写了父类或接口中的方法
      * @see ElevatorInput
      * @see Request
      * @see PersonRequest
      * @see Scheduler#newRequest(Passenger)
      * @see Scheduler#getInstance()
      * @see Scheduler#stopAllElevators()
-     * @Override // 表明此方法重写了父类或接口中的方法
      */
     @Override
     public void run() {

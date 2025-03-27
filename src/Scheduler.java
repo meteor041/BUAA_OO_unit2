@@ -16,7 +16,7 @@ public class Scheduler {
             // 使用 Comparator.comparingInt(Passenger::getPriority).reversed() 使优先级高的排前面
             waitingLine.add(new TreeSet<>(
                     Comparator.comparingInt((Passenger p) -> p.getRequest().getPriority())
-                    .reversed().thenComparingLong(Passenger::getEnterTime)
+                            .reversed().thenComparingLong(Passenger::getEnterTime)
                             .thenComparingInt((Passenger p) -> p.getRequest().getPersonId())));
         }
         for (int i = 1; i <= NUM_ELEVATORS; i++) {
@@ -36,7 +36,8 @@ public class Scheduler {
     }
 
     /**
-     *  处理新的请求
+     * 处理新的请求
+     *
      * @param passenger 新的请求
      */
     public static void newRequest(Passenger passenger) {
