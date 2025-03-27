@@ -16,4 +16,23 @@ public class Passenger {
     public PersonRequest getRequest() {
         return request;
     }
+
+    public String toString() {
+        return String.format("%d-PRI-%d-FROM-%s-TO-%s-BY-%d",
+                this.request.getPersonId(),
+                this.request.getPriority(),
+                this.request.getFromFloor(),
+                this.request.getToFloor(),
+                this.request.getElevatorId());
+    }
+
+    @Override
+    public int hashCode() {
+        return request.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof Passenger && request.equals(((Passenger) obj).request);
+    }
 }
