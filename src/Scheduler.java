@@ -1,10 +1,7 @@
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import static utils.FloorConverter.floorString2Int;
 
 public class Scheduler {
     private static final Scheduler instance = new Scheduler();
@@ -12,16 +9,17 @@ public class Scheduler {
     private static final int NUM_FLOORS = 11;
     private final CopyOnWriteArrayList<Elevator> elevators;
     // 等待中的乘客列表
-    private final List<TreeSet<Passenger>> waitingLine;
+    private final CopyOnWriteArrayList<TreeSet<Passenger>> waitingLine;
 
     private Scheduler() {
         elevators = new CopyOnWriteArrayList<>();
-        waitingLine = new ArrayList<>(NUM_ELEVATORS);
-        for (int i = 0; i < NUM_FLOORS; i++) {
+        waitingLine = new CopyOnWriteArrayList<>();
+        for (int i = 0; i < NUM_ELEVATORS; i++) {
             // 使用 Comparator.comparingInt(Passenger::getPriority).reversed() 使优先级高的排前面
             waitingLine.add(new TreeSet<>(
                     Comparator.comparingInt((Passenger p) -> p.getRequest().getPriority())
-                    .reversed().thenComparingLong(Passenger::getEnterTime)));
+                    .reversed().thenComparingLong(Passenger::getEnterTime)
+                            .thenComparingInt((Passenger p) -> p.getRequest().getPersonId())));
         }
         for (int i = 1; i <= NUM_ELEVATORS; i++) {
             Elevator elevator = new Elevator(i);
@@ -54,34 +52,15 @@ public class Scheduler {
      */
     public void recieveRequest(Passenger passenger) {
         int elevatorId = passenger.getRequest().getElevatorId();
-        synchronized (getInstance().waitingLine.get(elevatorId - 1)) {
-            waitingLine.get(elevatorId - 1).add(passenger);
-            getInstance().waitingLine.get(elevatorId - 1).notify();
+        synchronized (getInstance().getWaitingLine(elevatorId)) {
+            getInstance().getWaitingLine(elevatorId).add(passenger);
+//            System.out.println("recieve request " + passenger.getRequest().getPersonId()
+//                    + getInstance().getWaitingLine(elevatorId));
+            getInstance().getWaitingLine(elevatorId).notify();
         }
     }
 
-    /**
-     * 判断电梯是否可以在当前楼层接载乘客
-     *
-     * @param elevator      电梯对象
-     * @param floor         当前楼层
-     * @param leaveElevator 是否有乘客要离开电梯
-     * @return true表示可以接载乘客，false表示不能接载
-     */
-    public boolean canEnter(Elevator elevator, int floor, boolean leaveElevator) {
-        // 如果电梯满载且无人在此楼层下电梯,
-        // 则电梯一定无法新加乘客
-        if (elevator.full() && !leaveElevator) {
-            return false;
-        }
-        int id = elevator.getId();
-        for (Passenger passenger : waitingLine.get(id - 1)) {
-            if (floorString2Int(passenger.getRequest().getFromFloor()) == floor) {
-                return true;
-            }
-        }
-        return false;
-    }
+
 
     /**
      * 接收InputThread发送的停止输入信号,将其转发给每个电梯线程
