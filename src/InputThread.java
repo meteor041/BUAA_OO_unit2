@@ -62,11 +62,6 @@ public class InputThread implements Runnable {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        try {
-            Thread.sleep(10);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
         Scheduler.getInstance().stopAllElevators();
 
     }
