@@ -63,6 +63,5 @@ public class InputThread implements Runnable {
             e.printStackTrace();
         }
         Scheduler.getInstance().stopAllElevators();
-
     }
 }
