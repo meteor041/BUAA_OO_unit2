@@ -6,7 +6,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static utils.FloorConverter.floorString2Int;
 import static utils.FloorConverter.floorInt2String;
@@ -135,10 +134,10 @@ public class Elevator implements Runnable {
                 if ((Scheduler.getInstance().getWaitingLine(id).isEmpty() 
                         && currentNum == 0) && !shouldTerminate) {
                     try {
-//                        System.out.println(id + "-wait:" + currentFloor);
+                        // System.out.println(id + "-wait:" + currentFloor);
                         // 等待用户的请求输入
                         Scheduler.getInstance().getWaitingLine(id).wait();
-//                        System.out.println(id + "-awake:" + currentFloor);
+                        // System.out.println(id + "-awake:" + currentFloor);
                         timeFixer.init();
                         direction = Direction.DUNNO;
                         elevatorAwake();
@@ -149,7 +148,7 @@ public class Elevator implements Runnable {
 
                 if (Scheduler.getInstance().getWaitingLine(id).isEmpty()
                         && currentNum == 0 && shouldTerminate) {
-//                    System.out.println(id + "-shutdown:" + currentFloor);
+                    // System.out.println(id + "-shutdown:" + currentFloor);
                     return;
                 }
                 boolean leaveElevator = !floor2req.get(currentFloor).isEmpty();
@@ -161,10 +160,11 @@ public class Elevator implements Runnable {
 
                 if (Scheduler.getInstance().getWaitingLine(id).isEmpty() 
                         && currentNum == 0) {
-//                    System.out.println("电梯" + id +"开关门后直接shutdown: " + Scheduler.getInstance().getWaitingLine(id));
+                    // System.out.println("电梯" + id +"开关门后直接shutdown: " +
+                    // Scheduler.getInstance().getWaitingLine(id));
                     // 这个电梯,不需要了
                     if (shouldTerminate) {
-//                        System.out.println(id + "-shutdown:" + currentFloor);
+                        // System.out.println(id + "-shutdown:" + currentFloor);
                         return;
                     }
                     continue;

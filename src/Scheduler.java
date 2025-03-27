@@ -2,7 +2,6 @@ import java.util.Comparator;
 import java.util.TreeSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-
 public class Scheduler {
     private static final Scheduler instance = new Scheduler();
     private static final int NUM_ELEVATORS = 6;
@@ -54,13 +53,11 @@ public class Scheduler {
         int elevatorId = passenger.getRequest().getElevatorId();
         synchronized (getInstance().getWaitingLine(elevatorId)) {
             getInstance().getWaitingLine(elevatorId).add(passenger);
-//            System.out.println("recieve request " + passenger.getRequest().getPersonId()
-//                    + getInstance().getWaitingLine(elevatorId));
+            // System.out.println("recieve request " + passenger.getRequest().getPersonId()
+            // + getInstance().getWaitingLine(elevatorId));
             getInstance().getWaitingLine(elevatorId).notify();
         }
     }
-
-
 
     /**
      * 接收InputThread发送的停止输入信号,将其转发给每个电梯线程
