@@ -18,12 +18,7 @@ public class Passenger {
     }
 
     public String toString() {
-        return String.format("%d-PRI-%d-FROM-%s-TO-%s-BY-%d",
-                this.request.getPersonId(),
-                this.request.getPriority(),
-                this.request.getFromFloor(),
-                this.request.getToFloor(),
-                this.request.getElevatorId());
+        return request.toString();
     }
 
     @Override

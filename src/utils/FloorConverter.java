@@ -9,7 +9,7 @@ public class FloorConverter {
      * @throws IllegalArgumentException 如果楼层字符串格式不正确。
      */
     public static int floorString2Int(String toFloorString) {
-        if (toFloorString.substring(0, 1).equals("B")) {
+        if (toFloorString.charAt(0) == 'B') {
             // 地下层
             return -1 * Integer.parseInt(toFloorString.substring(1));
         } else {
@@ -31,14 +31,4 @@ public class FloorConverter {
         }
     }
 
-    /**
-     * 计算两个楼层整数形式之间的距离
-     */
-    public static int calFloorDistance(int x, int y) {
-        if (x * y > 0) {
-            return (x > y) ? (x - y) : (y - x);
-        } else {
-            return (x > y) ? (x - y - 1) : (y - x - 1);
-        }
-    }
 }

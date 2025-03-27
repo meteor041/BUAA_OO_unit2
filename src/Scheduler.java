@@ -15,9 +15,9 @@ public class Scheduler {
         for (int i = 0; i < NUM_ELEVATORS; i++) {
             // 使用 Comparator.comparingInt(Passenger::getPriority).reversed() 使优先级高的排前面
             waitingLine.add(new TreeSet<>(
-                    Comparator.comparingInt((Passenger p) -> p.getRequest().getPriority())
-                            .reversed().thenComparingLong(Passenger::getEnterTime)
-                            .thenComparingInt((Passenger p) -> p.getRequest().getPersonId())));
+                Comparator.comparingInt((Passenger p) -> p.getRequest().getPriority())
+                .reversed().thenComparingLong(Passenger::getEnterTime)
+                .thenComparingInt((Passenger p) -> p.getRequest().getPersonId())));
         }
         for (int i = 1; i <= NUM_ELEVATORS; i++) {
             Elevator elevator = new Elevator(i);
@@ -41,7 +41,7 @@ public class Scheduler {
      * @param passenger 新的请求
      */
     public static void newRequest(Passenger passenger) {
-        getInstance().recieveRequest(passenger);
+        getInstance().receiveRequest(passenger);
     }
 
     /**
@@ -49,12 +49,10 @@ public class Scheduler {
      *
      * @param passenger 乘客请求对象，包含出发楼层、目标楼层等信息
      */
-    public void recieveRequest(Passenger passenger) {
+    public void receiveRequest(Passenger passenger) {
         int elevatorId = passenger.getRequest().getElevatorId();
         synchronized (getInstance().getWaitingLine(elevatorId)) {
             getInstance().getWaitingLine(elevatorId).add(passenger);
-            // System.out.println("recieve request " + passenger.getRequest().getPersonId()
-            // + getInstance().getWaitingLine(elevatorId));
             getInstance().getWaitingLine(elevatorId).notify();
         }
     }
