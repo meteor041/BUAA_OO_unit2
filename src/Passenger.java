@@ -16,4 +16,18 @@ public class Passenger {
     public PersonRequest getRequest() {
         return request;
     }
+
+    public String toString() {
+        return request.toString();
+    }
+
+    @Override
+    public int hashCode() {
+        return request.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof Passenger && request.equals(((Passenger) obj).request);
+    }
 }

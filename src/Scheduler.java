@@ -1,27 +1,23 @@
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.CopyOnWriteArrayList;
-
-import static utils.FloorConverter.floorString2Int;
 
 public class Scheduler {
     private static final Scheduler instance = new Scheduler();
     private static final int NUM_ELEVATORS = 6;
-    private static final int NUM_FLOORS = 11;
     private final CopyOnWriteArrayList<Elevator> elevators;
     // 等待中的乘客列表
-    private final List<TreeSet<Passenger>> waitingLine;
+    private final CopyOnWriteArrayList<TreeSet<Passenger>> waitingLine;
 
     private Scheduler() {
         elevators = new CopyOnWriteArrayList<>();
-        waitingLine = new ArrayList<>(NUM_ELEVATORS);
-        for (int i = 0; i < NUM_FLOORS; i++) {
+        waitingLine = new CopyOnWriteArrayList<>();
+        for (int i = 0; i < NUM_ELEVATORS; i++) {
             // 使用 Comparator.comparingInt(Passenger::getPriority).reversed() 使优先级高的排前面
             waitingLine.add(new TreeSet<>(
-                    Comparator.comparingInt((Passenger p) -> p.getRequest().getPriority())
-                    .reversed().thenComparingLong(Passenger::getEnterTime)));
+                Comparator.comparingInt((Passenger p) -> p.getRequest().getPriority())
+                .reversed().thenComparingLong(Passenger::getEnterTime)
+                .thenComparingInt((Passenger p) -> p.getRequest().getPersonId())));
         }
         for (int i = 1; i <= NUM_ELEVATORS; i++) {
             Elevator elevator = new Elevator(i);
@@ -40,11 +36,12 @@ public class Scheduler {
     }
 
     /**
-     *  处理新的请求
+     * 处理新的请求
+     *
      * @param passenger 新的请求
      */
     public static void newRequest(Passenger passenger) {
-        getInstance().recieveRequest(passenger);
+        getInstance().receiveRequest(passenger);
     }
 
     /**
@@ -52,35 +49,12 @@ public class Scheduler {
      *
      * @param passenger 乘客请求对象，包含出发楼层、目标楼层等信息
      */
-    public void recieveRequest(Passenger passenger) {
+    public void receiveRequest(Passenger passenger) {
         int elevatorId = passenger.getRequest().getElevatorId();
-        synchronized (getInstance().waitingLine.get(elevatorId - 1)) {
-            waitingLine.get(elevatorId - 1).add(passenger);
-            getInstance().waitingLine.get(elevatorId - 1).notify();
+        synchronized (getInstance().getWaitingLine(elevatorId)) {
+            getInstance().getWaitingLine(elevatorId).add(passenger);
+            getInstance().getWaitingLine(elevatorId).notify();
         }
-    }
-
-    /**
-     * 判断电梯是否可以在当前楼层接载乘客
-     *
-     * @param elevator      电梯对象
-     * @param floor         当前楼层
-     * @param leaveElevator 是否有乘客要离开电梯
-     * @return true表示可以接载乘客，false表示不能接载
-     */
-    public boolean canEnter(Elevator elevator, int floor, boolean leaveElevator) {
-        // 如果电梯满载且无人在此楼层下电梯,
-        // 则电梯一定无法新加乘客
-        if (elevator.full() && !leaveElevator) {
-            return false;
-        }
-        int id = elevator.getId();
-        for (Passenger passenger : waitingLine.get(id - 1)) {
-            if (floorString2Int(passenger.getRequest().getFromFloor()) == floor) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
@@ -93,6 +67,6 @@ public class Scheduler {
     }
 
     public TreeSet<Passenger> getWaitingLine(int elevatorId) {
-        return waitingLine.get(elevatorId-1);
+        return waitingLine.get(elevatorId - 1);
     }
 }
