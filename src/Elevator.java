@@ -175,7 +175,7 @@ public class Elevator implements Runnable {
             try {
                 long gap = timeFixer.archive();
                 if (move_time > gap) {
-                    Thread.sleep(this.move_time - gap);
+                    Thread.sleep(move_time - gap);
                 }
                 timeFixer.init();
             } catch (InterruptedException e) {

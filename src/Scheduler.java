@@ -5,7 +5,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class Scheduler {
     private static final Scheduler instance = new Scheduler();
     private static final int NUM_ELEVATORS = 6;
-    private static final int NUM_FLOORS = 11;
     private final CopyOnWriteArrayList<Elevator> elevators;
     // 等待中的乘客列表
     private final CopyOnWriteArrayList<TreeSet<Passenger>> waitingLine;

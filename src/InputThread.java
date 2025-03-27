@@ -38,12 +38,11 @@ public class InputThread implements Runnable {
      * @see Scheduler#newRequest(Passenger)
      * @see Scheduler#getInstance()
      * @see Scheduler#stopAllElevators()
-     * @override // 表明此方法重写了父类或接口中的方法
+     * @Override // 表明此方法重写了父类或接口中的方法
      */
     @Override
     public void run() {
         ElevatorInput elevatorInput = new ElevatorInput(System.in);
-        int enterTime = 0;
         while (true) {
             Request request = elevatorInput.nextRequest();
             if (request == null) {
