@@ -43,7 +43,8 @@ public class Elevator implements Runnable {
             }
             floor2req.put(i, new TreeSet<>(Comparator.comparingInt(
                     (Passenger p) -> p.getRequest().getPriority())
-                    .reversed().thenComparingLong(Passenger::getEnterTime)));
+                    .reversed().thenComparingLong(Passenger::getEnterTime)
+                    .thenComparingInt((Passenger p) -> p.getRequest().getPersonId())));
         }
         currentFloor = initPos;
         direction = Direction.DUNNO;
@@ -62,6 +63,7 @@ public class Elevator implements Runnable {
         TimableOutput.println("IN-" + request.getPersonId() + 
                 "-" + request.getFromFloor() + "-" + this.id);
         floor2req.get(toFloor).add(passenger);
+//        System.out.println(passenger + " in : Current in Elevator:" + floor2req.get(toFloor));
     }
 
     /**
@@ -328,7 +330,8 @@ public class Elevator implements Runnable {
      */
     private void openAndCloseDoor(boolean leaveElevator) {
         boolean enterElevator = canEnter(leaveElevator);
-
+//        System.out.println(id + " : " + Scheduler.getInstance().getWaitingLine(id) +
+//                " floor2req : " + floor2req + " current_num :" + currentNum + " direction:" + direction);
         if (enterElevator || leaveElevator) {
             TimableOutput.println("OPEN-" + floorInt2String(currentFloor) + "-" + this.id);
             timeFixer.init();
@@ -340,6 +343,7 @@ public class Elevator implements Runnable {
                 passengerOut(passenger);
             }
             list.clear();
+//            System.out.println("list:" + list);
         }
 
         // 如果有人要上下电梯,就得依次完成门保持开着400ms和接收乘客的操作
