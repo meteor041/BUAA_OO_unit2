@@ -93,6 +93,6 @@ public class Scheduler {
     }
 
     public TreeSet<Passenger> getWaitingLine(int elevatorId) {
-        return waitingLine.get(elevatorId-1);
+        return waitingLine.get(elevatorId - 1);
     }
 }
